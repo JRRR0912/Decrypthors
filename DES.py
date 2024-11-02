@@ -5,14 +5,32 @@ import itertools
 key = ""
 class DES:
     
-    def permutate(text,key):
-        charSplit = list(text)
-        permutations = list(itertools.permutations(charSplit))
-        permPos = random.randrange(0,len(permutations))
-        key += str(permPos)
-        perm = permutations[permPos]
+    # ***
+    # with this method, the input plaintext 
+    # goes through the initial permutation
+    # ***
+    def FirstPermutate(text,key):
+        perm = list()
+        wordSplit = text.split()
+        for word in wordSplit:
+            charSplit = list(word)
+            permutations = list(itertools.permutations(charSplit))
+            permPos = random.randrange(0,len(permutations))
+            key += str(permPos)
+            permList = permutations[permPos]
+            for char in permList:
+                perm.append(char)
         return perm
+    
+    # ***
+    # converts the permuted text to a byte array
+    # ***
+    def convertToBytes(permText, key):
+        byteList = list()
+        for byte in permText:
+            byteList.append(format(ord(byte), '08b'))
+        return byteList
         
 if __name__ == "__main__":
-    encryption = DES.permutate("Hello", key)
+    encryption = DES.convertToBytes(DES.FirstPermutate("Hello World", key), key)
     print(encryption)
