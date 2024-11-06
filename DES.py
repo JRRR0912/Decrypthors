@@ -31,6 +31,14 @@ class DES:
             byteList.append(format(ord(byte), '08b'))
         return byteList
         
+    def makeOneString(byteList):
+        binaryString = ""
+        for byte in byteList:
+            binaryString += byte
+        return binaryString
+    
 if __name__ == "__main__":
     encryption = DES.convertToBytes(DES.FirstPermutate("Hello World", key), key)
+    result = DES.makeOneString(encryption)
     print(encryption)
+    print(result)
