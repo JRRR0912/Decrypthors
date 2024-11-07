@@ -1,108 +1,147 @@
 import string
 import random
-from Crypto.Cipher import DES
-from Crypto.Random import get_random_bytes
+import itertools
 
-# Helper functions for DES
-def pad_text(text):
-    while len(text) % 8 != 0:
-        text += ' '
-    return text
+subkeys = [
+    '01111111', '10111111', '11011111', '11101111',
+    '11110111', '11111011', '11111101', '11111110',
+    '10101010', '01010101', '10100101', '01011010',
+    '00001111', '00110011', '11001100', '11110000'
+]
 
-def des_encrypt(plain_text, key):
-    des = DES.new(key, DES.MODE_ECB)
-    padded_text = pad_text(plain_text)
-    encrypted_text = des.encrypt(padded_text.encode('utf-8'))
-    return encrypted_text
 
-def des_decrypt(encrypted_text, key):
-    des = DES.new(key, DES.MODE_ECB)
-    decrypted_text = des.decrypt(encrypted_text).strip()
-    return decrypted_text.decode('utf-8')
+class DES:
 
-# Helper function to create a randomized alphabet rotor
-def create_rotor():
-    alphabet = string.ascii_uppercase
-    shuffled = list(alphabet)
-    random.shuffle(shuffled)
-    return ''.join(shuffled)
+    # ***
+    # with this method, the input plaintext
+    # goes through the initial permutation
+    # ***
+    def FirstPermutate(text, key):
+        perm = list()
+        wordSplit = text.split()
+        for word in wordSplit:
+            charSplit = list(word)
+            permutations = list(itertools.permutations(charSplit))
+            permPos = random.randrange(0, len(permutations))
+            permList = permutations[permPos]
+            for char in permList:
+                perm.append(char)
+        return perm
 
-# Class for the Rotor Machine with three rotors
-class RotorMachine:
-    def __init__(self):
-        self.alphabet = string.ascii_uppercase  # Only use uppercase for simplicity
-        self.rotor1 = create_rotor()
-        self.rotor2 = create_rotor()
-        self.rotor3 = create_rotor()
-        self.rotor_positions = [0, 0, 0]  # Initial positions for each rotor
+    # ***
+    # converts the permuted text to a byte array
+    # ***
+    def convertToBytes(permText):
+        byteList = list()
+        for byte in permText:
+            byteList.append(format(ord(byte), '08b'))
+        return byteList
 
-    def rotate_rotors(self):
-        self.rotor_positions[0] += 1
-        if self.rotor_positions[0] >= len(self.alphabet):
-            self.rotor_positions[0] = 0
-            self.rotor_positions[1] += 1
-            if self.rotor_positions[1] >= len(self.alphabet):
-                self.rotor_positions[1] = 0
-                self.rotor_positions[2] += 1
-                if self.rotor_positions[2] >= len(self.alphabet):
-                    self.rotor_positions[2] = 0
+    def makeOneString(byteList):
+        binaryString = ""
+        for byte in byteList:
+            binaryString += byte
+        return binaryString
 
-    def encrypt_char(self, char):
-        index = self.alphabet.index(char)
-        step1 = (index + self.rotor_positions[0]) % len(self.alphabet)
-        char = self.rotor1[step1]
-        step2 = (self.alphabet.index(char) + self.rotor_positions[1]) % len(self.alphabet)
-        char = self.rotor2[step2]
-        step3 = (self.alphabet.index(char) + self.rotor_positions[2]) % len(self.alphabet)
-        return self.rotor3[step3]
+class Rotor:
+    def __init__(self, name, wiring, notch):
+        self.name = name
+        self.wiring = wiring
+        self.notch = notch  # Indicates the position that triggers the next rotor to advance
+        self.position = 0
 
-    def decrypt_char(self, char):
-        index = self.rotor3.index(char)
-        step3 = (index - self.rotor_positions[2]) % len(self.alphabet)
-        char = self.alphabet[step3]
-        index = self.rotor2.index(char)
-        step2 = (index - self.rotor_positions[1]) % len(self.alphabet)
-        char = self.alphabet[step2]
-        index = self.rotor1.index(char)
-        step1 = (index - self.rotor_positions[0]) % len(self.alphabet)
-        return self.alphabet[step1]
+    def rotate(self):
+        self.position = (self.position + 1) % 26
+        return self.position == self.notch
+
+    def encrypt(self, letter):
+        index = (string.ascii_uppercase.index(letter) + self.position) % 26
+        letter = self.wiring[index]
+        index = (string.ascii_uppercase.index(letter) - self.position) % 26
+        return string.ascii_uppercase[index]
+
+    def decrypt(self, letter):
+        index = (string.ascii_uppercase.index(letter) + self.position) % 26
+        letter = string.ascii_uppercase[self.wiring.index(letter)]
+        index = (string.ascii_uppercase.index(letter) - self.position) % 26
+        return string.ascii_uppercase[index]
+
+class Plugboard:
+    def __init__(self, swaps):
+        self.swaps = swaps
+
+    def substitute(self, letter):
+        return self.swaps.get(letter, letter)
+
+class Reflector:
+    def __init__(self, wiring):
+        self.wiring = wiring
+
+    def reflect(self, letter):
+        index = string.ascii_uppercase.index(letter)
+        return self.wiring[index]
+
+class EnigmaMachine:
+    def __init__(self, rotors, plugboard, reflector):
+        self.rotors = rotors
+        self.plugboard = plugboard
+        self.reflector = reflector
+
+    def step_rotors(self):
+        rotate_next = True
+        for rotor in self.rotors:
+            if rotate_next:
+                rotate_next = rotor.rotate()
+            else:
+                break
 
     def encrypt(self, text):
-        encrypted_text = ''
-        for char in text.upper():
-            if char in self.alphabet:
-                encrypted_char = self.encrypt_char(char)
-                self.rotate_rotors()
-                encrypted_text += encrypted_char
+        encrypted_text = []
+        for letter in text.upper():
+            if letter in string.ascii_uppercase:
+                self.step_rotors()  # Rotate rotors before encrypting each letter
+                letter = self.plugboard.substitute(letter)
+                for rotor in self.rotors:
+                    letter = rotor.encrypt(letter)
+                letter = self.reflector.reflect(letter)
+                for rotor in reversed(self.rotors):
+                    letter = rotor.decrypt(letter)
+                encrypted_text.append(letter)
             else:
-                encrypted_text += char
-        return encrypted_text
+                encrypted_text.append(letter)
+        return ''.join(encrypted_text)
 
     def decrypt(self, text):
-        decrypted_text = ''
-        for char in text.upper():
-            if char in self.alphabet:
-                decrypted_char = self.decrypt_char(char)
-                self.rotate_rotors()
-                decrypted_text += decrypted_char
+        decrypted_text = []
+        for letter in text.upper():
+            if letter in string.ascii_uppercase:
+                self.step_rotors()  # Rotate rotors before decrypting each letter
+                for rotor in reversed(self.rotors):
+                    letter = rotor.decrypt(letter)
+                letter = self.reflector.reflect(letter)
+                for rotor in self.rotors:
+                    letter = rotor.encrypt(letter)
+                decrypted_text.append(letter)
             else:
-                decrypted_text += char
-        return decrypted_text
+                decrypted_text.append(letter)
+        return ''.join(decrypted_text)
+
 
 # Example usage
 if __name__ == "__main__":
-    rotor_machine = RotorMachine()
-    message = "HELLO WORLD"
-    encrypted_rotor = rotor_machine.encrypt(message)
-    decrypted_rotor = rotor_machine.decrypt(encrypted_rotor)
+    # Example usage:
+    rotor1 = Rotor('I', 'EKMFLGDQVZNTOWYHXUSPAIBRCJ', 17)  # Notch at 'R'
+    rotor2 = Rotor('II', 'AJDKSIRUXBLHWTMCQGZNPYFVOE', 5)  # Notch at 'F'
+    rotor3 = Rotor('III', 'BDFHJLCPRTXVZNYEIWGAKMUSQO', 22)  # Notch at 'W'
+    plugboard = Plugboard({'A': 'J', 'B': 'G', 'C': 'D'})
+    reflector = Reflector('YRUHQSLDPXNGOKMIEBFZCWVJAT')
 
-    print("Rotor Encrypted:", encrypted_rotor)
-    print("Rotor Decrypted:", decrypted_rotor)
+    enigma_machine = EnigmaMachine([rotor1, rotor2, rotor3], plugboard, reflector)
 
-    # DES encryption
-    key = get_random_bytes(8)  # DES key must be 8 bytes
-    des_encrypted = des_encrypt(encrypted_rotor, key)
-    des_decrypted = des_decrypt(des_encrypted, key)
+    text = 'HELLO WORLD*&%*&%^&$%^#'
+    encrypted_text = enigma_machine.encrypt(text)
+    print(encrypted_text)  # Output: GUR PENML XRL
 
-    print("DES Encrypted (bytes):", des_encrypted)
-    print("DES Decrypted (text):", des_decrypted)
+
+
+
