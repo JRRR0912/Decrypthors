@@ -149,7 +149,8 @@ def on_encrypt():
     if des_var.get() and rotor_var.get():
         # Hybrid encryption: Rotor Machine first, then DES
         encrypted_rotor = enigma_machine.encrypt(plaintext)
-        encrypted_DES = des_encrypt(encrypted_rotor)
+        encrypted_DES = des_encrypt(plaintext)
+        encrypted_hybrid = des_encrypt(encrypted_rotor)
 
         # Display in all output boxes
         rotor_output.delete("1.0", tk.END)
@@ -159,7 +160,7 @@ def on_encrypt():
         des_output.insert(tk.END, encrypted_DES.hex())
 
         hybrid_output.delete("1.0", tk.END)
-        hybrid_output.insert(tk.END, encrypted_DES.hex())
+        hybrid_output.insert(tk.END, encrypted_hybrid.hex())
     elif rotor_var.get():
         # Only Rotor Machine encryption
         encrypted_rotor = enigma_machine.encrypt(plaintext)
