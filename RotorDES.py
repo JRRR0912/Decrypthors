@@ -1,6 +1,24 @@
 import string
 import random
 import itertools
+from Crypto.Cipher import DES
+from Crypto.Util.Padding import pad, unpad
+
+# fixed 64-bit (8-byte) key and IV
+key = b'8bytekey'
+iv = b'8byteiv!'
+
+def des_encrypt(plaintext):
+    cipher = DES.new(key, DES.MODE_CBC, iv)
+    padded_text = pad(plaintext.encode('utf-8'), DES.block_size)
+    ciphertext = cipher.encrypt(padded_text)
+    return ciphertext
+
+def des_decrypt(ciphertext):
+    decipher = DES.new(key, DES.MODE_CBC, iv)
+    decrypted_padded_text = decipher.decrypt(ciphertext)
+    decrypted_text = unpad(decrypted_padded_text, DES.block_size)
+    return decrypted_text.decode('utf-8')
 
 
 
@@ -111,10 +129,7 @@ class EnigmaMachine:
             rotor.reset()
         return self.process_text(text)
 
-
-# Example usage
-if __name__ == "__main__":
-    # Example usage:
+def Task_1_2():
     rotor1 = Rotor('I', 'EKMFLGDQVZNTOWYHXUSPAIBRCJ', 17)  # Notch at 'R'
     rotor2 = Rotor('II', 'AJDKSIRUXBLHWTMCQGZNPYFVOE', 5)  # Notch at 'F'
     rotor3 = Rotor('III', 'BDFHJLCPRTXVZNYEIWGAKMUSQO', 22)  # Notch at 'W'
@@ -129,13 +144,41 @@ if __name__ == "__main__":
         encrypted_rotor = enigma_machine.encrypt(word)
         print(f'Encrypted using Rotor Machine {word}: {encrypted_rotor}')
 
-        # encrypted_DES =
-        # print(f'Encrypted using DES {word}: {encrypted_DES}')
+        encrypted_DES = des_encrypt(word)
+        print(f'Encrypted using DES {word}: {encrypted_DES}')
 
         decrypted_rotor = enigma_machine.decrypt(encrypted_rotor)
         print(f'Decrypted back using Rotor Machine: {decrypted_rotor}')
-        # decrypted_DES =
-        # print(f'Decrypted back using Rotor Machine: {decrypted_DES}')
+        decrypted_DES = des_decrypt(encrypted_DES)
+        print(f'Decrypted back using DES: {decrypted_DES}')
+
+def Task3():
+    rotor1 = Rotor('I', 'EKMFLGDQVZNTOWYHXUSPAIBRCJ', 17)  # Notch at 'R'
+    rotor2 = Rotor('II', 'AJDKSIRUXBLHWTMCQGZNPYFVOE', 5)  # Notch at 'F'
+    rotor3 = Rotor('III', 'BDFHJLCPRTXVZNYEIWGAKMUSQO', 22)  # Notch at 'W'
+    plugboard = Plugboard({'A': 'J', 'B': 'G', 'C': 'D'})
+    reflector = Reflector('YRUHQSLDPXNGOKMIEBFZCWVJAT')
+
+    enigma_machine = EnigmaMachine([rotor1, rotor2, rotor3], plugboard, reflector)
+
+    # Task 3
+    text = ["HOW ARE YOU", "HAPPY NEW YEAR", "WELCOME TO PUERTO RICO"]
+    for word in text:
+        encrypted_rotor = enigma_machine.encrypt(word)
+        print(f'Encrypted using Rotor Machine {word}: {encrypted_rotor}')
+
+        encrypted_DES = des_encrypt(encrypted_rotor)
+        print(f'Encrypted using DES {word}: {encrypted_DES}')
+        decrypted_DES = des_decrypt(encrypted_DES)
+        print(f'Decrypted back using DES: {decrypted_DES}')
+        decrypted_rotor = enigma_machine.decrypt(decrypted_DES)
+        print(f'Decrypted back using Rotor Machine: {decrypted_rotor}')
+
+
+if __name__ == "__main__":
+    Task_1_2()
+    Task3()
+
 
 
 
