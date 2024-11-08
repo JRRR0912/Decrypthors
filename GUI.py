@@ -226,7 +226,7 @@ def on_decrypt():
 
 # Set up the main application window
 root = tk.Tk()
-root.title("Encryption and Decryption GUI")
+root.title("Hybrid Crypto System")
 
 # Input Text
 ttk.Label(root, text="Input Text:").grid(row=0, column=0, padx=5, pady=5, sticky='w')
